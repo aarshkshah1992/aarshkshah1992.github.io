@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>India in the 20th Century Timeline</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #f0f3f5;
+            }
+            h1 {
+                text-align: center;
+                color: #2c3e50;
+            }
+            .timeline {
+                position: relative;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+            .timeline::after {
+                content: "";
+                position: absolute;
+                width: 6px;
+                background-color: #34495e;
+                top: 0;
+                bottom: 0;
+                left: 50%;
+                margin-left: -3px;
+            }
+            .container {
+                padding: 10px 40px;
+                position: relative;
+                background-color: inherit;
+                width: 50%;
+                opacity: 0;
+                transform: translateY(50px);
+                transition: all 0.8s ease-out;
+            }
+            .container.animate {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            .container::after {
+                content: "";
+                position: absolute;
+                width: 25px;
+                height: 25px;
+                right: -17px;
+                background-color: #ecf0f1;
+                border: 4px solid #e67e22;
+                top: 15px;
+                border-radius: 50%;
+                z-index: 1;
+            }
+            .left {
+                left: 0;
+            }
+            .right {
+                left: 50%;
+            }
+            .left::before {
+                content: " ";
+                height: 0;
+                position: absolute;
+                top: 22px;
+                width: 0;
+                z-index: 1;
+                right: 30px;
+                border: medium solid #34495e;
+                border-width: 10px 0 10px 10px;
+                border-color: transparent transparent transparent #34495e;
+            }
+            .right::before {
+                content: " ";
+                height: 0;
+                position: absolute;
+                top: 22px;
+                width: 0;
+                z-index: 1;
+                left: 30px;
+                border: medium solid #34495e;
+                border-width: 10px 10px 10px 0;
+                border-color: transparent #34495e transparent transparent;
+            }
+            .right::after {
+                left: -16px;
+            }
+            .content {
+                padding: 20px 30px;
+                background-color: #34495e;
+                position: relative;
+                border-radius: 6px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                color: #ecf0f1;
+            }
+            .content h2 {
+                color: #e67e22;
+                margin-top: 0;
+            }
+            .content a {
+                color: #3498db;
+            }
+            @media screen and (max-width: 600px) {
+                .timeline::after {
+                    left: 31px;
+                }
+                .container {
+                    width: 100%;
+                    padding-left: 70px;
+                    padding-right: 25px;
+                }
+                .container::before {
+                    left: 60px;
+                    border: medium solid #34495e;
+                    border-width: 10px 10px 10px 0;
+                    border-color: transparent #34495e transparent transparent;
+                }
+                .left::after,
+                .right::after {
+                    left: 15px;
+                }
+                .right {
+                    left: 0%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <h1>India in the 20th Century Timeline</h1>
+        <div class="timeline" id="timeline"></div>
+
+        <script>
+            const events = [
+                {
+                    year: 1906,
+                    title: "Muslim League Formed",
+                    description:
+                        "All-India Muslim League established to protect Muslim interests",
+                    wikiLink:
+                        "https://en.wikipedia.org/wiki/All-India_Muslim_League",
+                },
+                {
+                    year: 1915,
+                    title: "Gandhi Returns to India",
+                    description:
+                        "Mahatma Gandhi returns from South Africa to lead the Indian independence movement",
+                    wikiLink: "https://en.wikipedia.org/wiki/Mahatma_Gandhi",
+                },
+                {
+                    year: 1919,
+                    title: "Jallianwala Bagh Massacre",
+                    description:
+                        "British troops fire on peaceful protesters in Amritsar, killing hundreds",
+                    wikiLink:
+                        "https://en.wikipedia.org/wiki/Jallianwala_Bagh_massacre",
+                },
+                {
+                    year: 1930,
+                    title: "Salt March",
+                    description:
+                        "Gandhi leads a 240-mile march to protest the British salt monopoly",
+                    wikiLink: "https://en.wikipedia.org/wiki/Salt_March",
+                },
+                {
+                    year: 1935,
+                    title: "Government of India Act",
+                    description:
+                        "British Parliament passes act providing for limited self-government in India",
+                    wikiLink:
+                        "https://en.wikipedia.org/wiki/Government_of_India_Act_1935",
+                },
+                {
+                    year: 1942,
+                    title: "Quit India Movement",
+                    description:
+                        "Gandhi launches civil disobedience movement demanding British withdrawal",
+                    wikiLink:
+                        "https://en.wikipedia.org/wiki/Quit_India_Movement",
+                },
+                {
+                    year: 1947,
+                    title: "Indian Independence",
+                    description:
+                        "India gains independence from British rule; Partition creates Pakistan",
+                    wikiLink:
+                        "https://en.wikipedia.org/wiki/Indian_Independence_Act_1947",
+                },
+                {
+                    year: 1950,
+                    title: "Republic of India",
+                    description:
+                        "India adopts its constitution and becomes a republic",
+                    wikiLink:
+                        "https://en.wikipedia.org/wiki/Constitution_of_India",
+                },
+                {
+                    year: 1962,
+                    title: "Sino-Indian War",
+                    description: "Border conflict between India and China",
+                    wikiLink: "https://en.wikipedia.org/wiki/Sino-Indian_War",
+                },
+                {
+                    year: 1971,
+                    title: "Bangladesh Liberation War",
+                    description:
+                        "India supports East Pakistan's independence, leading to the creation of Bangladesh",
+                    wikiLink:
+                        "https://en.wikipedia.org/wiki/Bangladesh_Liberation_War",
+                },
+                {
+                    year: 1975,
+                    title: "State of Emergency",
+                    description:
+                        "Prime Minister Indira Gandhi imposes a state of emergency, suspending civil liberties",
+                    wikiLink:
+                        "https://en.wikipedia.org/wiki/The_Emergency_(India)",
+                },
+                {
+                    year: 1983,
+                    title: "Cricket World Cup Victory",
+                    description: "India wins its first Cricket World Cup",
+                    wikiLink:
+                        "https://en.wikipedia.org/wiki/1983_Cricket_World_Cup",
+                },
+                {
+                    year: 1991,
+                    title: "Economic Liberalization",
+                    description:
+                        "India introduces major economic reforms, opening up its economy",
+                    wikiLink:
+                        "https://en.wikipedia.org/wiki/Economic_liberalisation_in_India",
+                },
+                {
+                    year: 1998,
+                    title: "Nuclear Tests",
+                    description:
+                        "India conducts nuclear weapons tests, declaring itself a nuclear state",
+                    wikiLink: "https://en.wikipedia.org/wiki/Pokhran-II",
+                },
+                {
+                    year: 1999,
+                    title: "Kargil War",
+                    description:
+                        "Armed conflict between India and Pakistan in the Kargil district of Kashmir",
+                    wikiLink: "https://en.wikipedia.org/wiki/Kargil_War",
+                },
+            ];
+
+            const timeline = document.getElementById("timeline");
+
+            events.forEach((event, index) => {
+                const container = document.createElement("div");
+                container.className = `container ${index % 2 === 0 ? "left" : "right"}`;
+
+                const content = document.createElement("div");
+                content.className = "content";
+
+                content.innerHTML = `
+            <h2>${event.year}</h2>
+            <h3>${event.title}</h3>
+            <p>${event.description}</p>
+            <a href="${event.wikiLink}" target="_blank">Learn more</a>
+        `;
+
+                container.appendChild(content);
+                timeline.appendChild(container);
+            });
+
+            // Intersection Observer setup
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add("animate");
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                },
+                {
+                    threshold: 0.1,
+                },
+            );
+
+            // Observe all timeline containers
+            document.querySelectorAll(".container").forEach((container) => {
+                observer.observe(container);
+            });
+        </script>
+    </body>
+</html>
