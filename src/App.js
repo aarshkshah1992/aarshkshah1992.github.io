@@ -115,7 +115,12 @@ function App() {
             <Button
               variant="contained"
               color={isEmitting ? "secondary" : "primary"}
-              onClick={() => setIsEmitting(!isEmitting)}
+              onClick={() => {
+                setIsEmitting(!isEmitting);
+                if (isEmitting) {
+                  setIsDetectorOn(false);
+                }
+              }}
               style={{ marginRight: "10px" }}
             >
               {isEmitting ? "Stop Emission" : "Start Emission"}
@@ -126,6 +131,7 @@ function App() {
                   checked={isDetectorOn}
                   onChange={() => setIsDetectorOn(!isDetectorOn)}
                   color="primary"
+                  disabled={!isEmitting}
                 />
               }
               label="Activate Detector"
