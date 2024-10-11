@@ -26,6 +26,12 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
     const screenPosition = canvas.width - 50;
     const sourcePosition = 50;
 
+    // Increase particle velocity
+    const particleVelocity = 4; // Increased from 2
+
+    // Decrease emission interval for faster emission
+    const emissionInterval = 10; // Decreased from 20
+
     const slitWidth = 10;
     const slitHeight = 60;
     const slitGap = 80;
@@ -38,7 +44,6 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
     let particles = [];
     let wavefronts = [];
     let frameCount = 0;
-    const emissionInterval = 20;
     let interferencePatternActive = false;
 
     const resetAnimation = () => {
@@ -57,7 +62,7 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
       constructor() {
         this.x = sourcePosition;
         this.y = canvas.height / 2;
-        this.vx = 2;
+        this.vx = particleVelocity; // Use the new particleVelocity
         this.vy = 0;
         this.channel = null;
         this.inSuperposition = true;
@@ -185,10 +190,10 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
       constructor(x, y, vx, wavelength) {
         this.x = x;
         this.y = y;
-        this.vx = vx;
-        this.wavelength = wavelength || 50;
+        this.vx = vx * 2; // Double the wave velocity
+        this.wavelength = wavelength || 25; // Halve the wavelength for faster propagation
         this.amplitude = 1;
-        this.angularFrequency = (2 * Math.PI * vx) / this.wavelength;
+        this.angularFrequency = (2 * Math.PI * this.vx) / this.wavelength;
         this.initialPhase = 0;
       }
 
@@ -426,9 +431,12 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
         }
       });
 
-      wavefronts.forEach((wavefront) => {
-        wavefront.propagate();
-        wavefront.draw(ctx, frameCount);
+      wavefronts.forEach((wavefront, index) => {
+        if (wavefront.propagate()) {
+          wavefronts.splice(index, 1);
+        } else {
+          wavefront.draw(ctx, frameCount);
+        }
       });
 
       if (isDetectorOn) {
