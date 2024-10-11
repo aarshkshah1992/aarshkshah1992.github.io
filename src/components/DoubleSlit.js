@@ -48,53 +48,147 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
         this.vx = 2;
         this.vy = 0;
         this.channel = null;
+        this.inSuperposition = true;
+        this.superpositionWaves = [];
+        this.probabilityCloud = [];
+        this.collapsing = false;
+        this.collapseProgress = 0;
+        this.trail = [];
       }
 
       move() {
-        if (this.x < barrierPosition) {
+        if (this.x < barrierPosition - 100) {
           this.x += this.vx;
+          if (this.inSuperposition && this.x > 100) {
+            this.createProbabilityCloud();
+          }
+        } else if (this.x < barrierPosition) {
+          this.x += this.vx;
+          this.updateProbabilityCloud();
         } else {
           if (!this.channel) {
             if (isDetectorOn) {
               this.channel = Math.random() < 0.5 ? "top" : "bottom";
+              this.inSuperposition = false;
+              this.collapsing = true;
             } else {
               this.channel = "both";
-              // Remove particle and generate initial wavefronts
               const index = particles.indexOf(this);
               if (index > -1) {
                 particles.splice(index, 1);
               }
               wavefronts.push(
-                new Wavefront(
-                  barrierPosition + slitWidth / 2,
-                  slitY1 + slitHeight / 2,
-                  this.vx
-                ),
-                new Wavefront(
-                  barrierPosition + slitWidth / 2,
-                  slitY2 + slitHeight / 2,
-                  this.vx
-                )
+                new Wavefront(barrierPosition + slitWidth / 2, slitY1 + slitHeight / 2, this.vx),
+                new Wavefront(barrierPosition + slitWidth / 2, slitY2 + slitHeight / 2, this.vx)
               );
               return;
             }
           }
 
-          this.x += this.vx;
+          if (this.collapsing) {
+            this.collapseProgress += 0.1;
+            if (this.collapseProgress >= 1) {
+              this.collapsing = false;
+              this.collapseProgress = 1;
+            }
+          } else {
+            this.x += this.vx;
 
-          if (this.channel === "top") {
-            this.y = slitY1 + slitHeight / 2;
-          } else if (this.channel === "bottom") {
-            this.y = slitY2 + slitHeight / 2;
+            if (this.channel === "top") {
+              this.y = slitY1 + slitHeight / 2;
+            } else if (this.channel === "bottom") {
+              this.y = slitY2 + slitHeight / 2;
+            }
+
+            this.trail.push({ x: this.x, y: this.y });
+            if (this.trail.length > 20) {
+              this.trail.shift();
+            }
           }
         }
       }
 
+      createProbabilityCloud() {
+        for (let i = 0; i < 20; i++) {
+          this.probabilityCloud.push({
+            x: this.x + Math.random() * 60 - 30,
+            y: this.y + Math.random() * 60 - 30,
+            opacity: Math.random() * 0.5 + 0.5,
+          });
+        }
+      }
+
+      updateProbabilityCloud() {
+        this.probabilityCloud.forEach((point) => {
+          point.x += this.vx;
+          point.opacity -= 0.02;
+        });
+        this.probabilityCloud = this.probabilityCloud.filter((point) => point.opacity > 0);
+      }
+
       draw() {
+        if (this.inSuperposition && this.x > 100) {
+          this.drawProbabilityCloud();
+        } else if (this.collapsing) {
+          this.drawCollapse();
+        } else {
+          this.drawParticle();
+          this.drawTrail();
+        }
+      }
+
+      drawProbabilityCloud() {
+        this.probabilityCloud.forEach((point) => {
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, 1, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(74, 14, 78, ${point.opacity})`;
+          ctx.fill();
+        });
+      }
+
+      drawCollapse() {
+        const startX = barrierPosition - 50;
+        const endX = barrierPosition + slitWidth / 2;
+        const x = startX + (endX - startX) * this.collapseProgress;
+
+        ctx.beginPath();
+        ctx.moveTo(startX, this.y);
+        ctx.lineTo(x, this.y);
+        ctx.strokeStyle = "#FF4081";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(x, this.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#FF4081";
+        ctx.fill();
+
+        // Highlight chosen slit
+        const slitY = this.channel === "top" ? slitY1 : slitY2;
+        ctx.strokeStyle = "#FF4081";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(barrierPosition, slitY, slitWidth, slitHeight);
+      }
+
+      drawParticle() {
         ctx.beginPath();
         ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
         ctx.fillStyle = "#4A0E4E";
         ctx.fill();
+      }
+
+      drawTrail() {
+        ctx.beginPath();
+        this.trail.forEach((point, index) => {
+          if (index === 0) {
+            ctx.moveTo(point.x, point.y);
+          } else {
+            ctx.lineTo(point.x, point.y);
+          }
+        });
+        ctx.strokeStyle = "rgba(74, 14, 78, 0.3)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
       }
     }
 
@@ -278,6 +372,20 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
 
       if (impacts.length > 0 || wavefronts.length > 0) {
         drawInterferencePattern();
+      }
+
+      // Draw superposition explanation
+      if (particles.length > 0 && particles[0].inSuperposition) {
+        ctx.font = "14px Arial";
+        ctx.fillStyle = "#333";
+        ctx.fillText("Particle in superposition", 10, 20);
+      }
+
+      // Update tooltip content
+      if (isDetectorOn) {
+        setTooltipContent("Detector Active: Wave function collapses, particle chooses one slit");
+      } else {
+        setTooltipContent("Detector Inactive: Particle behaves as a wave, passing through both slits");
       }
 
       animationRef.current = requestAnimationFrame(animate);

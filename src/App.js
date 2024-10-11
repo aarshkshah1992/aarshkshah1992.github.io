@@ -48,6 +48,17 @@ function App() {
       <p>By observing the particles, we disturb their quantum state, causing the wavefunction to collapse into a single state. This means each particle behaves like a classical particle, going through only one slit. The absence of the interference pattern indicates that the wave-like behavior has been altered by measurement, illustrating the <strong>observer effect</strong> in quantum mechanics.</p>`,
     },
     {
+      label: "Wave Function Collapse",
+      description: `<p>When the detector is <strong>on</strong>, we can observe the wave function collapse in action:</p>
+      <ul>
+        <li>Before reaching the slits, the particle is represented by a probability cloud, showing its wave-like nature.</li>
+        <li>As it approaches the detector, you'll see the wave function "collapse" into a definite state.</li>
+        <li>The particle then chooses one slit, highlighted in pink, and follows a definite path afterwards.</li>
+        <li>This visualization demonstrates how measurement affects the quantum state, forcing the particle to behave classically.</li>
+      </ul>
+      <p>Toggle the detector on and off to compare the wave-like and particle-like behaviors.</p>`,
+    },
+    {
       label: "Wavefunction Collapse and Probabilities",
       description: `<p>The <strong>wavefunction collapse</strong> is a fundamental concept in quantum mechanics. It describes how the act of measurement affects a quantum system, forcing it from a superposition of states into a single state.</p>
       <h3>Implications:</h3>
