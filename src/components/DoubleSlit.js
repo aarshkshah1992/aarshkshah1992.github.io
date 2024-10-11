@@ -1,7 +1,8 @@
 import React, { useRef, useEffect } from "react";
 
-const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
+const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDistribution, setShowBarChart }) => {
   const canvasRef = useRef(null);
+  const audioContextRef = useRef(null);
   const animationRef = useRef();
 
   useEffect(() => {
@@ -9,6 +10,9 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
     canvas.width = 800;
     canvas.height = 400;
     const ctx = canvas.getContext("2d");
+
+    // Initialize AudioContext
+    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
 
     const barrierPosition = canvas.width / 2 - 50;
     const screenPosition = canvas.width - 50;
@@ -23,21 +27,24 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
     const bottomSlitColor = "#4ECDC4";
 
     let particles = [];
-    let impacts = [];
-    let impactCounts = [];
-    let channelImpactCounts = { top: 0, bottom: 0 };
+    let detectedParticles = [];
     let wavefronts = [];
     let frameCount = 0;
-    const emissionInterval = 20; // Emit particles more frequently for smoother animation
+    const emissionInterval = 20;
     let interferencePatternActive = false;
+
+    // Create an off-screen canvas for the detection screen
+    const detectionCanvas = document.createElement('canvas');
+    detectionCanvas.width = 50;
+    detectionCanvas.height = canvas.height;
+    const detectionCtx = detectionCanvas.getContext('2d');
 
     const resetAnimation = () => {
       particles = [];
       wavefronts = [];
-      impacts = [];
-      impactCounts = [];
-      channelImpactCounts = { top: 0, bottom: 0 };
+      detectedParticles = [];
       interferencePatternActive = false;
+      detectionCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
@@ -199,7 +206,7 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
         this.x = x;
         this.y = y;
         this.vx = vx;
-        this.wavelength = wavelength || 50; // Default wavelength if not provided
+        this.wavelength = wavelength || 50;
         this.amplitude = 1;
         this.angularFrequency = (2 * Math.PI * vx) / this.wavelength;
         this.initialPhase = 0;
@@ -209,15 +216,14 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
         this.x += this.vx;
         if (this.x >= screenPosition) {
           interferencePatternActive = true;
-          // Optionally, you can stop the wavefront at the screen
           this.x = screenPosition;
-          return false; // Do not remove the wavefront yet
+          return false;
         }
         return false;
       }
 
       draw(ctx, time) {
-        if (!ctx) return; // Guard clause to prevent errors if ctx is undefined
+        if (!ctx) return;
 
         ctx.beginPath();
         ctx.strokeStyle = "rgba(0, 0, 255, 0.2)";
@@ -260,71 +266,33 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
       ctx.fillRect(screenPosition, 0, 2, canvas.height);
     };
 
-    const updateInterferencePattern = () => {
-      if (isDetectorOn) {
-        const y = impacts[impacts.length - 1].y;
-        const channel = y < canvas.height / 2 ? "top" : "bottom";
-        channelImpactCounts[channel]++;
-      }
+    const drawFlash = (x, y, color) => {
+      ctx.beginPath();
+      ctx.arc(x, y, 10, 0, Math.PI * 2);
+      ctx.fillStyle = color + "80"; // Add 50% opacity
+      ctx.fill();
     };
 
-    const calculateInterference = (y, time) => {
-      const wavelength = 50;
-      const k = (2 * Math.PI) / wavelength;
-      const slitSeparation = slitY2 + slitHeight / 2 - (slitY1 + slitHeight / 2);
-      const screenDistance = screenPosition - barrierPosition;
-
-      const yPosition = y + 0.5;
-      const deltaY1 = yPosition - (slitY1 + slitHeight / 2);
-      const deltaY2 = yPosition - (slitY2 + slitHeight / 2);
-
-      const r1 = Math.sqrt(screenDistance ** 2 + deltaY1 ** 2);
-      const r2 = Math.sqrt(screenDistance ** 2 + deltaY2 ** 2);
-
-      const pathDifference = r2 - r1;
-      const phaseDifference = k * pathDifference;
-
-      const amplitude1 = Math.cos(k * r1 - 2 * Math.PI * time / 100);
-      const amplitude2 = Math.cos(k * r2 - 2 * Math.PI * time / 100);
-
-      const intensity = (amplitude1 + amplitude2) ** 2;
-
-      return intensity / 4; // Normalize to [0, 1]
+    const updateDetectionScreen = (x, y, color) => {
+      const gradient = detectionCtx.createRadialGradient(x - screenPosition, y, 0, x - screenPosition, y, 20);
+      gradient.addColorStop(0, color + "40"); // 25% opacity at center
+      gradient.addColorStop(1, "transparent");
+      detectionCtx.fillStyle = gradient;
+      detectionCtx.fillRect(x - screenPosition - 20, y - 20, 40, 40);
     };
 
-    const drawInterferencePattern = () => {
-      ctx.fillStyle = "#CFD8DC";
-      ctx.fillRect(screenPosition + 2, 0, 48, canvas.height);
+    const drawDetectionScreen = () => {
+      ctx.drawImage(detectionCanvas, screenPosition, 0);
+    };
 
-      if (isDetectorOn) {
-        const totalImpacts = channelImpactCounts.top + channelImpactCounts.bottom;
-        if (totalImpacts > 0) {
-          const topHeight = (channelImpactCounts.top / totalImpacts) * canvas.height;
-          const bottomHeight = canvas.height - topHeight;
-
-          ctx.fillStyle = topSlitColor;
-          ctx.fillRect(screenPosition + 2, 0, 48, topHeight);
-          ctx.fillStyle = bottomSlitColor;
-          ctx.fillRect(screenPosition + 2, topHeight, 48, bottomHeight);
-        }
-      } else if (interferencePatternActive) {
-        const imageData = ctx.createImageData(48, canvas.height);
-
-        for (let y = 0; y < canvas.height; y++) {
-          const intensity = calculateInterference(y, frameCount);
-          const color = Math.floor(intensity * 255);
-
-          const index = y * 48 * 4;
-          for (let x = 0; x < 48; x++) {
-            imageData.data[index + x * 4] = 100;     // R
-            imageData.data[index + x * 4 + 1] = 181; // G
-            imageData.data[index + x * 4 + 2] = 246; // B
-            imageData.data[index + x * 4 + 3] = color; // A
-          }
-        }
-
-        ctx.putImageData(imageData, screenPosition + 2, 0);
-      }
+    const updateParticleDistribution = (y) => {
+      const binIndex = Math.floor((y / canvas.height) * 20);
+      setParticleDistribution(prev => {
+        const newDist = [...prev];
+        newDist[binIndex]++;
+        return newDist;
+      });
+      setShowBarChart(true);
     };
 
     const drawDetector = () => {
@@ -354,6 +322,74 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
       }
     };
 
+    // New function for calculating interference
+    const calculateInterference = (y, time) => {
+      const wavelength = 50;
+      const k = (2 * Math.PI) / wavelength;
+      const _slitSeparation = slitY2 + slitHeight / 2 - (slitY1 + slitHeight / 2);
+      const screenDistance = screenPosition - barrierPosition;
+
+      const yPosition = y + 0.5;
+      const deltaY1 = yPosition - (slitY1 + slitHeight / 2);
+      const deltaY2 = yPosition - (slitY2 + slitHeight / 2);
+
+      const r1 = Math.sqrt(screenDistance ** 2 + deltaY1 ** 2);
+      const r2 = Math.sqrt(screenDistance ** 2 + deltaY2 ** 2);
+
+      const pathDifference = r2 - r1;
+      const _phaseDifference = k * pathDifference;
+
+      const amplitude1 = Math.cos(k * r1 - 2 * Math.PI * time / 100);
+      const amplitude2 = Math.cos(k * r2 - 2 * Math.PI * time / 100);
+
+      const intensity = (amplitude1 + amplitude2) ** 2;
+
+      return intensity / 4; // Normalize to [0, 1]
+    };
+
+    // New function for drawing interference pattern
+    const drawInterferencePattern = () => {
+      ctx.fillStyle = "#CFD8DC";
+      ctx.fillRect(screenPosition + 2, 0, 48, canvas.height);
+
+      if (!isDetectorOn && interferencePatternActive) {
+        const imageData = ctx.createImageData(48, canvas.height);
+
+        for (let y = 0; y < canvas.height; y++) {
+          const intensity = calculateInterference(y, frameCount);
+          const color = Math.floor(intensity * 255);
+
+          const index = y * 48 * 4;
+          for (let x = 0; x < 48; x++) {
+            imageData.data[index + x * 4] = 100;     // R
+            imageData.data[index + x * 4 + 1] = 181; // G
+            imageData.data[index + x * 4 + 2] = 246; // B
+            imageData.data[index + x * 4 + 3] = color; // A
+          }
+        }
+
+        ctx.putImageData(imageData, screenPosition + 2, 0);
+      }
+    };
+
+    const playSound = () => {
+      const audioContext = audioContextRef.current;
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // 440 Hz - A4 note
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+      gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.1);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.1);
+    };
+
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawBarrier();
@@ -372,15 +408,14 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
         particle.draw();
 
         if (particle.x >= screenPosition) {
-          impacts.push({
-            y: particle.y,
-            channel: particle.channel,
-            intensity: 1,
-          });
-          particles.splice(index, 1);
           if (isDetectorOn) {
-            updateInterferencePattern();
+            const particleColor = particle.channel === "top" ? topSlitColor : bottomSlitColor;
+            drawFlash(screenPosition, particle.y, particleColor);
+            updateDetectionScreen(screenPosition, particle.y, particleColor);
+            updateParticleDistribution(particle.y);
+            playSound(); // Play sound when particle hits the screen
           }
+          particles.splice(index, 1);
         }
       });
 
@@ -389,7 +424,11 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
         wavefront.draw(ctx, frameCount);
       });
 
-      drawInterferencePattern();
+      if (isDetectorOn) {
+        drawDetectionScreen();
+      } else {
+        drawInterferencePattern();
+      }
 
       // Draw superposition explanation
       if (particles.length > 0 && particles[0].inSuperposition) {
@@ -413,7 +452,7 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
     return () => {
       resetAnimation();
     };
-  }, [isEmitting, isDetectorOn]);
+  }, [isEmitting, isDetectorOn, setTooltipContent, setParticleDistribution, setShowBarChart]);
 
   return (
     <canvas

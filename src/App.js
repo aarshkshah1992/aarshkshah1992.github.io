@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Grid,
   Typography,
@@ -11,14 +11,26 @@ import {
   StepLabel,
 } from "@mui/material";
 import DoubleSlit from "./components/DoubleSlit";
+import { Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import "./App.css";
-import { Visibility } from "@mui/icons-material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 function App() {
   const [activeStep, setActiveStep] = useState(0);
   const [isEmitting, setIsEmitting] = useState(false);
   const [isDetectorOn, setIsDetectorOn] = useState(false);
   const [tooltipContent, setTooltipContent] = useState("");
+  const [particleDistribution, setParticleDistribution] = useState(Array(20).fill(0));
+  const [showBarChart, setShowBarChart] = useState(false);
+
+  useEffect(() => {
+    if (!isDetectorOn) {
+      setShowBarChart(false);
+    }
+  }, [isDetectorOn]);
 
   const steps = [
     {
@@ -97,6 +109,55 @@ function App() {
     setIsDetectorOn(false);
   };
 
+  const chartData = {
+    labels: Array(20).fill(''),
+    datasets: [
+      {
+        label: 'Top Slit',
+        data: particleDistribution.slice(0, 10),
+        backgroundColor: 'rgba(255, 107, 107, 0.6)',
+        borderColor: 'rgba(255, 107, 107, 1)',
+        borderWidth: 1,
+      },
+      {
+        label: 'Bottom Slit',
+        data: particleDistribution.slice(10),
+        backgroundColor: 'rgba(78, 205, 196, 0.6)',
+        borderColor: 'rgba(78, 205, 196, 1)',
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+      },
+      tooltip: {
+        enabled: false,
+      },
+    },
+    scales: {
+      x: {
+        display: false,
+      },
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: 'Particles Detected',
+          font: {
+            size: 14,
+          },
+        },
+      },
+    },
+  };
+
   return (
     <div style={{ flexGrow: 1, padding: "20px" }}>
       <Grid container spacing={2}>
@@ -115,16 +176,14 @@ function App() {
         </Grid>
         {/* Animation and Controls */}
         <Grid item xs={12} md={8} style={{ textAlign: "center" }}>
-          <DoubleSlit isEmitting={isEmitting} isDetectorOn={isDetectorOn} setTooltipContent={setTooltipContent} />
-          <div
-            className="controls"
-            style={{
-              marginTop: "20px",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
+          <DoubleSlit
+            isEmitting={isEmitting}
+            isDetectorOn={isDetectorOn}
+            setTooltipContent={setTooltipContent}
+            setParticleDistribution={setParticleDistribution}
+            setShowBarChart={setShowBarChart}
+          />
+          <div className="controls">
             <Button
               variant="contained"
               color={isEmitting ? "secondary" : "primary"}
@@ -132,6 +191,8 @@ function App() {
                 setIsEmitting(!isEmitting);
                 if (isEmitting) {
                   setIsDetectorOn(false);
+                  setParticleDistribution(Array(20).fill(0));
+                  setShowBarChart(false);
                 }
               }}
               style={{ marginRight: "10px" }}
@@ -142,7 +203,11 @@ function App() {
               control={
                 <Switch
                   checked={isDetectorOn}
-                  onChange={() => setIsDetectorOn(!isDetectorOn)}
+                  onChange={() => {
+                    setIsDetectorOn(!isDetectorOn);
+                    setParticleDistribution(Array(20).fill(0));
+                    setShowBarChart(false);
+                  }}
                   color="primary"
                   disabled={!isEmitting}
                 />
@@ -181,34 +246,49 @@ function App() {
           </Paper>
         </Grid>
       </Grid>
-      <Typography variant="body2" style={{ marginTop: "10px", minHeight: "20px" }}>
-        <Paper
-          elevation={3}
-          style={{
-            marginTop: "20px",
-            padding: "10px",
-            backgroundColor: isDetectorOn ? "#E3F2FD" : "transparent",
-            transition: "background-color 0.3s ease",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Typography
-            variant="body1"
+      {(isEmitting && isDetectorOn) || (isEmitting && !isDetectorOn) ? (
+        <Typography variant="body2" style={{ marginTop: "10px", minHeight: "20px" }}>
+          <Paper
+            elevation={3}
             style={{
-              fontWeight: "500",
-              color: isDetectorOn ? "#1565C0" : "transparent",
-              transition: "color 0.3s ease",
-              display: "flex",
-              alignItems: "center",
+              marginTop: "20px",
+              padding: "10px",
+              backgroundColor: isDetectorOn ? "#E3F2FD" : "#F1F8E9",
+              transition: "background-color 0.3s ease",
             }}
           >
-            {isDetectorOn && <Visibility style={{ marginRight: "8px" }} />}
-            {tooltipContent}
-          </Typography>
-        </Paper>
-      </Typography>
+            <Typography
+              variant="body1"
+              style={{
+                fontWeight: "500",
+                color: isDetectorOn ? "#1565C0" : "#33691E",
+                transition: "color 0.3s ease",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              {isDetectorOn ? (
+                <>
+                  <Visibility style={{ marginRight: "8px" }} />
+                  Detector Active: Wave function collapses, particle chooses one slit.
+                  Particles behave like classical objects, creating a two-band pattern on the screen.
+                </>
+              ) : (
+                <>
+                  <VisibilityOff style={{ marginRight: "8px" }} />
+                  Detector Inactive: Particle behaves as a wave, passing through both slits.
+                  This creates an interference pattern on the screen, demonstrating the wave-like nature of particles.
+                </>
+              )}
+            </Typography>
+          </Paper>
+        </Typography>
+      ) : null}
+      {isDetectorOn && showBarChart && (
+        <div style={{ marginTop: "20px", width: "100%", height: "200px" }}>
+          <Bar data={chartData} options={chartOptions} />
+        </div>
+      )}
     </div>
   );
 }
