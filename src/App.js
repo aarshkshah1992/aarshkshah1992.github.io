@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Grid,
   Typography,
@@ -25,6 +25,44 @@ function App() {
   const [tooltipContent, setTooltipContent] = useState("");
   const [particleDistribution, setParticleDistribution] = useState(Array(20).fill(0));
   const [showBarChart, setShowBarChart] = useState(false);
+  const [audioContext, setAudioContext] = useState(null);
+
+  useEffect(() => {
+    setAudioContext(new (window.AudioContext || window.webkitAudioContext)());
+  }, []);
+
+  const playSound = useCallback((frequency, duration) => {
+    if (audioContext) {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + duration);
+    }
+  }, [audioContext]);
+
+  const handleEmissionToggle = () => {
+    setIsEmitting(!isEmitting);
+    if (isEmitting) {
+      setIsDetectorOn(false);
+      setParticleDistribution(Array(20).fill(0));
+      setShowBarChart(false);
+    }
+  };
+
+  const handleDetectorToggle = () => {
+    setIsDetectorOn(!isDetectorOn);
+    setParticleDistribution(Array(20).fill(0));
+    setShowBarChart(false);
+  };
 
   useEffect(() => {
     if (!isDetectorOn) {
@@ -140,6 +178,13 @@ function App() {
       tooltip: {
         enabled: false,
       },
+      title: {
+        display: true,
+        text: 'Probabilistic Distribution of Electron Detection',
+        font: {
+          size: 16,
+        },
+      },
     },
     scales: {
       x: {
@@ -187,14 +232,7 @@ function App() {
             <Button
               variant="contained"
               color={isEmitting ? "secondary" : "primary"}
-              onClick={() => {
-                setIsEmitting(!isEmitting);
-                if (isEmitting) {
-                  setIsDetectorOn(false);
-                  setParticleDistribution(Array(20).fill(0));
-                  setShowBarChart(false);
-                }
-              }}
+              onClick={handleEmissionToggle}
               style={{ marginRight: "10px" }}
             >
               {isEmitting ? "Stop Emission" : "Start Emission"}
@@ -203,11 +241,7 @@ function App() {
               control={
                 <Switch
                   checked={isDetectorOn}
-                  onChange={() => {
-                    setIsDetectorOn(!isDetectorOn);
-                    setParticleDistribution(Array(20).fill(0));
-                    setShowBarChart(false);
-                  }}
+                  onChange={handleDetectorToggle}
                   color="primary"
                   disabled={!isEmitting}
                 />
@@ -285,8 +319,12 @@ function App() {
         </Typography>
       ) : null}
       {isDetectorOn && showBarChart && (
-        <div style={{ marginTop: "20px", width: "100%", height: "200px" }}>
+        <div style={{ marginTop: "20px", width: "100%", height: "250px" }}>
           <Bar data={chartData} options={chartOptions} />
+          <Typography variant="body2" style={{ marginTop: "10px", textAlign: "center" }}>
+            This chart shows the probabilistic nature of electron detection. While we can't predict which slit an individual electron will pass through,
+            over many detections, we observe a roughly 50/50 distribution between the two slits. This demonstrates the inherent randomness in quantum mechanics.
+          </Typography>
         </div>
       )}
     </div>

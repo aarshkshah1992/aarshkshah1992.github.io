@@ -3,7 +3,9 @@ import React, { useRef, useEffect } from "react";
 const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDistribution, setShowBarChart }) => {
   const canvasRef = useRef(null);
   const audioContextRef = useRef(null);
+  const oscillatorRef = useRef(null);
   const animationRef = useRef();
+  const detectionCanvasRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -11,11 +13,18 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
     canvas.height = 400;
     const ctx = canvas.getContext("2d");
 
-    // Initialize AudioContext
+    // Initialize AudioContext (keep this for particle sounds)
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Create detection canvas
+    detectionCanvasRef.current = document.createElement('canvas');
+    detectionCanvasRef.current.width = 50;
+    detectionCanvasRef.current.height = canvas.height;
+    const detectionCtx = detectionCanvasRef.current.getContext('2d');
 
     const barrierPosition = canvas.width / 2 - 50;
     const screenPosition = canvas.width - 50;
+    const sourcePosition = 50;
 
     const slitWidth = 10;
     const slitHeight = 60;
@@ -27,57 +36,49 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
     const bottomSlitColor = "#4ECDC4";
 
     let particles = [];
-    let detectedParticles = [];
     let wavefronts = [];
     let frameCount = 0;
     const emissionInterval = 20;
     let interferencePatternActive = false;
 
-    // Create an off-screen canvas for the detection screen
-    const detectionCanvas = document.createElement('canvas');
-    detectionCanvas.width = 50;
-    detectionCanvas.height = canvas.height;
-    const detectionCtx = detectionCanvas.getContext('2d');
-
     const resetAnimation = () => {
       particles = [];
       wavefronts = [];
-      detectedParticles = [];
+      frameCount = 0;
       interferencePatternActive = false;
-      detectionCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
+      stopWaveSound();
+      detectionCtx.clearRect(0, 0, detectionCanvasRef.current.width, detectionCanvasRef.current.height);
     };
 
     class Particle {
       constructor() {
-        this.x = 50;
+        this.x = sourcePosition;
         this.y = canvas.height / 2;
         this.vx = 2;
         this.vy = 0;
         this.channel = null;
         this.inSuperposition = true;
-        this.superpositionWaves = [];
         this.probabilityCloud = [];
         this.collapsing = false;
         this.collapseProgress = 0;
-        this.trail = [];
+        this.color = "#4A0E4E"; // Default color
       }
 
       move() {
-        if (this.x < barrierPosition - 100) {
+        if (this.x < barrierPosition) {
           this.x += this.vx;
-          if (this.inSuperposition && this.x > 100) {
+          if (this.x > 100) {
             this.createProbabilityCloud();
           }
-        } else if (this.x < barrierPosition) {
-          this.x += this.vx;
           this.updateProbabilityCloud();
         } else {
           if (!this.channel) {
             if (isDetectorOn) {
               this.channel = Math.random() < 0.5 ? "top" : "bottom";
+              this.color = this.channel === "top" ? topSlitColor : bottomSlitColor;
               this.inSuperposition = false;
               this.collapsing = true;
             } else {
@@ -102,16 +103,10 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
             }
           } else {
             this.x += this.vx;
-
             if (this.channel === "top") {
               this.y = slitY1 + slitHeight / 2;
             } else if (this.channel === "bottom") {
               this.y = slitY2 + slitHeight / 2;
-            }
-
-            this.trail.push({ x: this.x, y: this.y });
-            if (this.trail.length > 20) {
-              this.trail.shift();
             }
           }
         }
@@ -136,13 +131,12 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
       }
 
       draw() {
-        if (this.inSuperposition && this.x > 100) {
+        if (this.inSuperposition && this.x > 100 && this.x < barrierPosition) {
           this.drawProbabilityCloud();
         } else if (this.collapsing) {
           this.drawCollapse();
         } else {
           this.drawParticle();
-          this.drawTrail();
         }
       }
 
@@ -182,22 +176,8 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
       drawParticle() {
         ctx.beginPath();
         ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
-        ctx.fillStyle = "#4A0E4E";
+        ctx.fillStyle = this.color;
         ctx.fill();
-      }
-
-      drawTrail() {
-        ctx.beginPath();
-        this.trail.forEach((point, index) => {
-          if (index === 0) {
-            ctx.moveTo(point.x, point.y);
-          } else {
-            ctx.lineTo(point.x, point.y);
-          }
-        });
-        ctx.strokeStyle = "rgba(74, 14, 78, 0.3)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
       }
     }
 
@@ -274,6 +254,9 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
     };
 
     const updateDetectionScreen = (x, y, color) => {
+      if (!color) {
+        color = "#4A0E4E"; // Default color if not set
+      }
       const gradient = detectionCtx.createRadialGradient(x - screenPosition, y, 0, x - screenPosition, y, 20);
       gradient.addColorStop(0, color + "40"); // 25% opacity at center
       gradient.addColorStop(1, "transparent");
@@ -282,7 +265,7 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
     };
 
     const drawDetectionScreen = () => {
-      ctx.drawImage(detectionCanvas, screenPosition, 0);
+      ctx.drawImage(detectionCanvasRef.current, screenPosition, 0);
     };
 
     const updateParticleDistribution = (y) => {
@@ -372,13 +355,13 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
       }
     };
 
-    const playSound = () => {
+    const playParticleSound = () => {
       const audioContext = audioContextRef.current;
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
       oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // 440 Hz - A4 note
+      oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
       gainNode.gain.setValueAtTime(0, audioContext.currentTime);
       gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
       gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.1);
@@ -388,6 +371,29 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
 
       oscillator.start();
       oscillator.stop(audioContext.currentTime + 0.1);
+    };
+
+    const startWaveSound = () => {
+      const audioContext = audioContextRef.current;
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(220, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.start();
+      oscillatorRef.current = oscillator;
+    };
+
+    const stopWaveSound = () => {
+      if (oscillatorRef.current) {
+        oscillatorRef.current.stop();
+        oscillatorRef.current = null;
+      }
     };
 
     const animate = () => {
@@ -409,11 +415,12 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
 
         if (particle.x >= screenPosition) {
           if (isDetectorOn) {
-            const particleColor = particle.channel === "top" ? topSlitColor : bottomSlitColor;
-            drawFlash(screenPosition, particle.y, particleColor);
-            updateDetectionScreen(screenPosition, particle.y, particleColor);
+            drawFlash(screenPosition, particle.y, particle.color);
+            updateDetectionScreen(screenPosition, particle.y, particle.color);
             updateParticleDistribution(particle.y);
-            playSound(); // Play sound when particle hits the screen
+            playParticleSound();
+          } else {
+            interferencePatternActive = true;
           }
           particles.splice(index, 1);
         }
@@ -430,18 +437,12 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent, setParticleDi
         drawInterferencePattern();
       }
 
-      // Draw superposition explanation
-      if (particles.length > 0 && particles[0].inSuperposition) {
-        ctx.font = "14px Arial";
-        ctx.fillStyle = "#333";
-        ctx.fillText("Particle in superposition", 10, 20);
-      }
-
-      // Update tooltip content
-      if (isDetectorOn) {
-        setTooltipContent("Detector Active: Wave function collapses, particle chooses one slit");
+      if (!isDetectorOn && interferencePatternActive) {
+        if (!oscillatorRef.current) {
+          startWaveSound();
+        }
       } else {
-        setTooltipContent("Detector Inactive: Particle behaves as a wave, passing through both slits");
+        stopWaveSound();
       }
 
       animationRef.current = requestAnimationFrame(animate);
