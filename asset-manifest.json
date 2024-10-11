@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/quantum/static/css/main.11bb0b31.css",
-    "main.js": "/quantum/static/js/main.a6f5d7aa.js",
+    "main.js": "/quantum/static/js/main.f8ec6b96.js",
     "static/js/453.a5e2ee9d.chunk.js": "/quantum/static/js/453.a5e2ee9d.chunk.js",
     "index.html": "/quantum/index.html",
     "main.11bb0b31.css.map": "/quantum/static/css/main.11bb0b31.css.map",
-    "main.a6f5d7aa.js.map": "/quantum/static/js/main.a6f5d7aa.js.map",
+    "main.f8ec6b96.js.map": "/quantum/static/js/main.f8ec6b96.js.map",
     "453.a5e2ee9d.chunk.js.map": "/quantum/static/js/453.a5e2ee9d.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.11bb0b31.css",
-    "static/js/main.a6f5d7aa.js"
+    "static/js/main.f8ec6b96.js"
   ]
 }
