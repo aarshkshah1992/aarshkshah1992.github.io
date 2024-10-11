@@ -6,24 +6,109 @@ import {
   Paper,
   Switch,
   FormControlLabel,
-  Stepper,
-  Step,
-  StepLabel,
+  ThemeProvider,
+  createTheme,
+  CssBaseline,
+  Box,
 } from "@mui/material";
+import { styled } from "@mui/system";
+import { motion, AnimatePresence } from "framer-motion";
 import DoubleSlit from "./components/DoubleSlit";
-import { Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import "./App.css";
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+);
+
+// Custom theme
+const theme = createTheme({
+  palette: {
+    mode: "dark",
+    primary: {
+      main: "#00b0ff",
+    },
+    secondary: {
+      main: "#ff4081",
+    },
+    background: {
+      default: "#0a1929",
+      paper: "#132f4c",
+    },
+    text: {
+      primary: "#ffffff",
+      secondary: "#b0bec5",
+    },
+  },
+  typography: {
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    h4: {
+      fontWeight: 700,
+    },
+    h5: {
+      fontWeight: 600,
+    },
+    body1: {
+      fontSize: "1.1rem",
+      lineHeight: 1.6,
+    },
+    body2: {
+      fontSize: "1rem",
+      lineHeight: 1.5,
+    },
+  },
+});
+
+// Styled components
+const StyledPaper = styled(motion.div)(({ theme }) => ({
+  padding: theme.spacing(2),
+  background: "linear-gradient(45deg, #132f4c 30%, #173a5e 90%)",
+  boxShadow: "0 3px 5px 2px rgba(33, 203, 243, .3)",
+  borderRadius: theme.shape.borderRadius,
+}));
+
+const GlowingButton = styled(motion.button)(({ theme }) => ({
+  background: "linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)",
+  border: 0,
+  borderRadius: 3,
+  boxShadow: "0 3px 5px 2px rgba(255, 105, 135, .3)",
+  color: "white",
+  height: 48,
+  padding: "0 30px",
+  margin: theme.spacing(1),
+  cursor: "pointer",
+  fontFamily: theme.typography.fontFamily,
+  fontSize: "1rem",
+  fontWeight: "bold",
+}));
+
+const ExplanationText = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.primary,
+  textShadow: "0 0 10px rgba(255, 255, 255, 0.3)",
+  marginBottom: theme.spacing(2),
+}));
 
 function App() {
-  const [activeStep, setActiveStep] = useState(0);
   const [isEmitting, setIsEmitting] = useState(false);
   const [isDetectorOn, setIsDetectorOn] = useState(false);
   const [tooltipContent, setTooltipContent] = useState("");
-  const [particleDistribution, setParticleDistribution] = useState(Array(20).fill(0));
+  const [particleDistribution, setParticleDistribution] = useState(
+    Array(20).fill(0),
+  );
   const [showBarChart, setShowBarChart] = useState(false);
   const [audioContext, setAudioContext] = useState(null);
 
@@ -31,23 +116,32 @@ function App() {
     setAudioContext(new (window.AudioContext || window.webkitAudioContext)());
   }, []);
 
-  const playSound = useCallback((frequency, duration) => {
-    if (audioContext) {
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
+  const playSound = useCallback(
+    (frequency, duration) => {
+      if (audioContext) {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
 
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
-      gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(
+          frequency,
+          audioContext.currentTime,
+        );
+        gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + duration,
+        );
 
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
 
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + duration);
-    }
-  }, [audioContext]);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + duration);
+      }
+    },
+    [audioContext],
+  );
 
   const handleEmissionToggle = () => {
     setIsEmitting(!isEmitting);
@@ -70,98 +164,21 @@ function App() {
     }
   }, [isDetectorOn]);
 
-  const steps = [
-    {
-      label: "Introduction",
-      description: `<p>Welcome to the <strong>Double-Slit Experiment Simulation</strong>. This interactive simulation allows you to explore one of the most fascinating phenomena in quantum mechanics, demonstrating how particles like electrons can exhibit both wave-like and particle-like properties. Use the controls below to start the simulation. You can toggle the detector to observe how measurement affects the behavior of particles and the resulting pattern on the screen.</p>`,
-    },
-    {
-      label: "Wave Behavior Without Observation",
-      description: `<p>With the detector <strong>off</strong>, particles are not observed as they pass through the slits. In this setup, each particle acts as a wave, passing through <strong>both slits simultaneously</strong> and interfering with itself.</p>
-      <h3>Observations:</h3>
-      <ul>
-        <li>An interference pattern gradually appears on the detection screen, characterized by alternating bright and dark fringes.</li>
-        <li>This pattern indicates areas of constructive and destructive interference, showing where particles are more or less likely to be detected.</li>
-      </ul>
-      <h3>Explanation:</h3>
-      <p>The wavefunction of each particle spreads out and passes through both slits, creating overlapping waves that interfere with each other. This interference affects the probability distribution of where particles will be detected on the screen, resulting in the observed pattern. This demonstrates the principle of <strong>quantum superposition</strong>, where particles can exist in multiple states or locations simultaneously.</p>`,
-    },
-    {
-      label: "Particle Behavior With Observation",
-      description: `<p>When the detector is <strong>on</strong>, particles are observed as they pass through the slits. In this setup, the act of measurement collapses the particle's wavefunction, forcing it to choose a definite path through <strong>one slit or the other</strong>.</p>
-      <h3>Observations:</h3>
-      <ul>
-        <li>The interference pattern disappears, and instead, two distinct bands form on the detection screen corresponding to the two slits.</li>
-        <li>The distribution of particles in each band reflects the probability of a particle passing through each slit.</li>
-      </ul>
-      <h3>Explanation:</h3>
-      <p>By observing the particles, we disturb their quantum state, causing the wavefunction to collapse into a single state. This means each particle behaves like a classical particle, going through only one slit. The absence of the interference pattern indicates that the wave-like behavior has been altered by measurement, illustrating the <strong>observer effect</strong> in quantum mechanics.</p>`,
-    },
-    {
-      label: "Wave Function Collapse",
-      description: `<p>When the detector is <strong>on</strong>, we can observe the wave function collapse in action:</p>
-      <ul>
-        <li>Before reaching the slits, the particle is represented by a probability cloud, showing its wave-like nature.</li>
-        <li>As it approaches the detector, you'll see the wave function "collapse" into a definite state.</li>
-        <li>The particle then chooses one slit, highlighted in pink, and follows a definite path afterwards.</li>
-        <li>This visualization demonstrates how measurement affects the quantum state, forcing the particle to behave classically.</li>
-      </ul>
-      <p>Toggle the detector on and off to compare the wave-like and particle-like behaviors.</p>`,
-    },
-    {
-      label: "Wavefunction Collapse and Probabilities",
-      description: `<p>The <strong>wavefunction collapse</strong> is a fundamental concept in quantum mechanics. It describes how the act of measurement affects a quantum system, forcing it from a superposition of states into a single state.</p>
-      <h3>Implications:</h3>
-      <ul>
-        <li>When unobserved, particles exhibit <strong>wave-like properties</strong>, leading to an interference pattern.</li>
-        <li>Observation causes particles to behave as <strong>classical particles</strong>, eliminating the interference pattern.</li>
-        <li>The slit through which a particle passes is determined probabilistically, not predetermined.</li>
-        <li>This demonstrates the <strong>inherent uncertainty</strong> and probabilistic nature of quantum systems.</li>
-      </ul>
-      <p>Toggle the detector to see how measurement influences the behavior of particles and the resulting patterns. This highlights the significant role of the observer in quantum mechanics.</p>`,
-    },
-    {
-      label: "Conclusion",
-      description: `<p>The double-slit experiment reveals the dual nature of particles and the profound effects of observation on quantum systems. It challenges our classical understanding of physics by showing that particles can behave as waves and that measurement affects outcomes.</p>
-      <p>Through this simulation, you have seen how particles behave differently when observed versus unobserved, emphasizing the key concepts of <strong>superposition</strong>, <strong>wave-particle duality</strong>, and the <strong>observer effect</strong>. This experiment lays the foundation for understanding the strange and fascinating world of quantum mechanics.</p>`,
-    },
-  ];
-
-  const handleNext = () => {
-    if (activeStep < steps.length - 1) {
-      setActiveStep((prevActiveStep) => prevActiveStep + 1);
-    } else {
-      setActiveStep(0);
-    }
-  };
-
-  const handleBack = () => {
-    if (activeStep > 0) {
-      setActiveStep((prevActiveStep) => prevActiveStep - 1);
-    }
-  };
-
-  const handleReset = () => {
-    setActiveStep(0);
-    setIsEmitting(false);
-    setIsDetectorOn(false);
-  };
-
   const chartData = {
-    labels: Array(20).fill(''),
+    labels: Array(20).fill(""),
     datasets: [
       {
-        label: 'Top Slit',
+        label: "Top Slit",
         data: particleDistribution.slice(0, 10),
-        backgroundColor: 'rgba(255, 107, 107, 0.6)',
-        borderColor: 'rgba(255, 107, 107, 1)',
+        backgroundColor: "rgba(255, 99, 132, 0.8)",
+        borderColor: "rgba(255, 99, 132, 1)",
         borderWidth: 1,
       },
       {
-        label: 'Bottom Slit',
+        label: "Bottom Slit",
         data: particleDistribution.slice(10),
-        backgroundColor: 'rgba(78, 205, 196, 0.6)',
-        borderColor: 'rgba(78, 205, 196, 1)',
+        backgroundColor: "rgba(53, 162, 235, 0.8)",
+        borderColor: "rgba(53, 162, 235, 1)",
         borderWidth: 1,
       },
     ],
@@ -173,16 +190,21 @@ function App() {
     plugins: {
       legend: {
         display: true,
-        position: 'top',
+        position: "top",
+        labels: {
+          color: "#ffffff",
+        },
       },
       tooltip: {
         enabled: false,
       },
       title: {
         display: true,
-        text: 'Probabilistic Distribution of Electron Detection',
+        text: "Particle Detection Distribution",
+        color: "#ffffff",
         font: {
           size: 16,
+          weight: "bold",
         },
       },
     },
@@ -194,140 +216,207 @@ function App() {
         beginAtZero: true,
         title: {
           display: true,
-          text: 'Particles Detected',
+          text: "Particles Detected",
+          color: "#ffffff",
           font: {
             size: 14,
+            weight: "bold",
           },
+        },
+        ticks: {
+          color: "#ffffff",
+        },
+        grid: {
+          color: "rgba(255, 255, 255, 0.1)",
         },
       },
     },
   };
 
   return (
-    <div style={{ flexGrow: 1, padding: "20px" }}>
-      <Grid container spacing={2}>
-        {/* Title and Stepper */}
-        <Grid item xs={12}>
-          <Typography variant="h4" align="center" gutterBottom>
-            Double-Slit Experiment Simulation
-          </Typography>
-          <Stepper activeStep={activeStep} alternativeLabel>
-            {steps.map((step, index) => (
-              <Step key={index}>
-                <StepLabel>{step.label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-        </Grid>
-        {/* Animation and Controls */}
-        <Grid item xs={12} md={8} style={{ textAlign: "center" }}>
-          <DoubleSlit
-            isEmitting={isEmitting}
-            isDetectorOn={isDetectorOn}
-            setTooltipContent={setTooltipContent}
-            setParticleDistribution={setParticleDistribution}
-            setShowBarChart={setShowBarChart}
-          />
-          <div className="controls">
-            <Button
-              variant="contained"
-              color={isEmitting ? "secondary" : "primary"}
-              onClick={handleEmissionToggle}
-              style={{ marginRight: "10px" }}
-            >
-              {isEmitting ? "Stop Emission" : "Start Emission"}
-            </Button>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={isDetectorOn}
-                  onChange={handleDetectorToggle}
-                  color="primary"
-                  disabled={!isEmitting}
-                />
-              }
-              label="Activate Detector"
-            />
-          </div>
-        </Grid>
-        {/* Step Content */}
-        <Grid item xs={12} md={4}>
-          <Paper elevation={3} className="scroll-container">
-            <div className="scroll-content">
-              <Typography variant="h5" className="scroll-title">
-                {steps[activeStep].label}
-              </Typography>
-              <Typography
-                variant="body1"
-                component="div"
-                dangerouslySetInnerHTML={{
-                  __html: steps[activeStep].description,
-                }}
-              />
-            </div>
-            <div style={{ marginTop: "20px", textAlign: "center" }}>
-              <Button
-                disabled={activeStep === 0}
-                onClick={handleBack}
-                style={{ marginRight: "10px" }}
-              >
-                Back
-              </Button>
-              <Button variant="contained" color="primary" onClick={handleNext}>
-                {activeStep === steps.length - 1 ? "Start Over" : "Next"}
-              </Button>
-            </div>
-          </Paper>
-        </Grid>
-      </Grid>
-      {(isEmitting && isDetectorOn) || (isEmitting && !isDetectorOn) ? (
-        <Typography variant="body2" style={{ marginTop: "10px", minHeight: "20px" }}>
-          <Paper
-            elevation={3}
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box
+        sx={{
+          height: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          padding: 2,
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Typography
+            variant="h4"
+            align="center"
+            gutterBottom
             style={{
-              marginTop: "20px",
-              padding: "10px",
-              backgroundColor: isDetectorOn ? "#E3F2FD" : "#F1F8E9",
-              transition: "background-color 0.3s ease",
+              color: "#00b0ff",
+              textShadow: "0 0 10px rgba(0, 176, 255, 0.5)",
             }}
           >
-            <Typography
-              variant="body1"
-              style={{
-                fontWeight: "500",
-                color: isDetectorOn ? "#1565C0" : "#33691E",
-                transition: "color 0.3s ease",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              {isDetectorOn ? (
-                <>
-                  <Visibility style={{ marginRight: "8px" }} />
-                  Detector Active: Wave function collapses, particle chooses one slit.
-                  Particles behave like classical objects, creating a two-band pattern on the screen.
-                </>
-              ) : (
-                <>
-                  <VisibilityOff style={{ marginRight: "8px" }} />
-                  Detector Inactive: Particle behaves as a wave, passing through both slits.
-                  This creates an interference pattern on the screen, demonstrating the wave-like nature of particles.
-                </>
-              )}
-            </Typography>
-          </Paper>
-        </Typography>
-      ) : null}
-      {isDetectorOn && showBarChart && (
-        <div style={{ marginTop: "20px", width: "100%", height: "250px" }}>
-          <Bar data={chartData} options={chartOptions} />
-          <Typography variant="body2" style={{ marginTop: "10px", textAlign: "center" }}>
-            This chart shows the probabilistic nature of electron detection. While we can't predict which slit an individual electron will pass through,
-            over many detections, we observe a roughly 50/50 distribution between the two slits. This demonstrates the inherent randomness in quantum mechanics.
+            Quantum Double-Slit Experiment
           </Typography>
-        </div>
-      )}
-    </div>
+        </motion.div>
+        <Grid container spacing={2} sx={{ flexGrow: 1 }}>
+          <Grid item xs={12} md={8}>
+            <StyledPaper
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+              elevation={3}
+              sx={{ height: "100%", display: "flex", flexDirection: "column" }}
+            >
+              <DoubleSlit
+                isEmitting={isEmitting}
+                isDetectorOn={isDetectorOn}
+                setTooltipContent={setTooltipContent}
+                setParticleDistribution={setParticleDistribution}
+                setShowBarChart={setShowBarChart}
+              />
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  mt: 2,
+                }}
+              >
+                <GlowingButton
+                  onClick={handleEmissionToggle}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {isEmitting ? "Stop Emission" : "Start Emission"}
+                </GlowingButton>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={isDetectorOn}
+                      onChange={handleDetectorToggle}
+                      color="secondary"
+                      disabled={!isEmitting}
+                    />
+                  }
+                  label="Activate Detector"
+                />
+              </Box>
+            </StyledPaper>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <StyledPaper
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              elevation={3}
+              sx={{ height: "100%", display: "flex", flexDirection: "column" }}
+            >
+              <Typography
+                variant="h6"
+                style={{ color: "#00b0ff", marginBottom: "10px" }}
+              >
+                Experiment Status
+              </Typography>
+              <Box
+                sx={{
+                  flexGrow: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                }}
+              >
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={isDetectorOn ? "detector-on" : "detector-off"}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <ExplanationText
+                      variant="body1"
+                      style={{
+                        fontWeight: "500",
+                        color: isDetectorOn ? "#ff4081" : "#00b0ff",
+                        display: "flex",
+                        alignItems: "center",
+                        marginBottom: "15px",
+                      }}
+                    >
+                      {isDetectorOn ? (
+                        <>
+                          <Visibility style={{ marginRight: "8px" }} />
+                          Detector Active: Wave function collapses, particle
+                          chooses one slit.
+                        </>
+                      ) : (
+                        <>
+                          <VisibilityOff style={{ marginRight: "8px" }} />
+                          Detector Inactive: Particle behaves as a wave, passing
+                          through both slits.
+                        </>
+                      )}
+                    </ExplanationText>
+                    <ExplanationText variant="body2">
+                      {isEmitting
+                        ? isDetectorOn
+                          ? "In this configuration, we are observing the particle behavior of quantum entities. Each particle is forced to choose a definite path through either the top or bottom slit. This measurement causes the wave function to collapse, resulting in a classical particle-like behavior. The interference pattern disappears, and we see two distinct bands on the screen."
+                          : "Now we're witnessing the wave nature of quantum particles. Without observation, each particle interferes with itself, passing through both slits simultaneously as a probability wave. This quantum superposition leads to the formation of an interference pattern on the screen, showcasing the wave-like properties of matter."
+                        : "The experiment is currently not running. Press 'Start Emission' to begin observing quantum phenomena."}
+                    </ExplanationText>
+                    <ExplanationText variant="body2">
+                      {isEmitting
+                        ? isDetectorOn
+                          ? "This demonstrates the 'observer effect' in quantum mechanics, where the act of measurement fundamentally alters the behavior of the system. It highlights the probabilistic nature of quantum mechanics and the role of observation in determining outcomes. To observe wave-like behavior, try turning off the detector."
+                          : "This phenomenon, known as wave-particle duality, is a fundamental principle of quantum mechanics. It shows that quantum entities can exhibit both wave-like and particle-like properties, depending on how they are measured. The interference pattern we observe is a direct manifestation of the quantum wave function. To see particle-like behavior, try activating the detector."
+                        : "Prepare to explore the fascinating world of quantum mechanics, where the very act of observation can dramatically change the outcome of an experiment. Click 'Start Emission' to begin and observe wave-like behavior."}
+                    </ExplanationText>
+                  </motion.div>
+                </AnimatePresence>
+                <AnimatePresence>
+                  {isDetectorOn && showBarChart && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      <Box sx={{ height: "200px", mt: 2 }}>
+                        <Bar data={chartData} options={chartOptions} />
+                      </Box>
+                      <ExplanationText
+                        variant="body2"
+                        style={{ marginTop: "10px" }}
+                      >
+                        This chart illustrates the probabilistic nature of
+                        quantum mechanics in action. Each electron, when
+                        detected, appears to have gone through either the top or
+                        bottom slit, but its choice is entirely random. While we
+                        can't predict which slit any individual electron will
+                        choose, over many detections we observe a roughly 50/50
+                        distribution between the two slits. This randomness is
+                        fundamental to quantum systems, not just a limitation of
+                        our measurement. Notice how the particles cluster around
+                        two distinct regions, corresponding to the two slits.
+                        This is in stark contrast to the interference pattern we
+                        would see if the detector were off, further illustrating
+                        the impact of measurement on quantum systems. To
+                        compare, try turning off the detector and observe the
+                        difference in particle behavior.
+                      </ExplanationText>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Box>
+            </StyledPaper>
+          </Grid>
+        </Grid>
+      </Box>
+    </ThemeProvider>
   );
 }
 
