@@ -1,0 +1,81 @@
+body {
+    margin: 0;
+    font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+    background-color: #ECEFF1;
+    color: #333;
+}
+
+.App {
+    text-align: center;
+    padding: 20px;
+}
+
+.controls {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.controls>* {
+    margin: 0 10px;
+}
+
+h4,
+h5 {
+    font-weight: 500;
+}
+
+p {
+    line-height: 1.6;
+}
+
+canvas {
+    border: 2px solid #90A4AE;
+    margin-top: 20px;
+    border-radius: 4px;
+}
+
+.scroll-container {
+    background-color: #FFFFFF;
+    border-radius: 8px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #CFD8DC;
+}
+
+.scroll-content {
+    max-height: none;
+    overflow-y: visible;
+    padding-top: 10px;
+    font-family: 'Roboto', sans-serif;
+    color: #37474F;
+    line-height: 1.6;
+    font-size: 16px;
+}
+
+h5.scroll-title {
+    color: #0D47A1;
+    margin-bottom: 20px;
+    font-size: 24px;
+}
+
+.scroll-content h3 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    color: #1976D2;
+}
+
+.scroll-content ul {
+    padding-left: 20px;
+    margin-bottom: 15px;
+}
+
+.scroll-content li {
+    margin-bottom: 5px;
+}
+
+.scroll-content p {
+    margin-bottom: 15px;
+}
