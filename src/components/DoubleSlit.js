@@ -29,6 +29,7 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
     let wavefronts = [];
     let frameCount = 0;
     const emissionInterval = 20; // Emit particles more frequently for smoother animation
+    let interferencePatternActive = false;
 
     const resetAnimation = () => {
       particles = [];
@@ -36,6 +37,7 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
       impacts = [];
       impactCounts = [];
       channelImpactCounts = { top: 0, bottom: 0 };
+      interferencePatternActive = false;
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
@@ -193,47 +195,36 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
     }
 
     class Wavefront {
-      constructor(x, y, vx) {
+      constructor(x, y, vx, wavelength) {
         this.x = x;
         this.y = y;
         this.vx = vx;
+        this.wavelength = wavelength || 50; // Default wavelength if not provided
         this.amplitude = 1;
-        this.phase = 0;
+        this.angularFrequency = (2 * Math.PI * vx) / this.wavelength;
+        this.initialPhase = 0;
       }
 
       propagate() {
         this.x += this.vx;
-        this.phase += 0.1; // Adjust for wave speed
         if (this.x >= screenPosition) {
-          // Calculate interference at the screen
-          for (let i = 0; i < canvas.height; i++) {
-            const pathDifference = Math.abs(i - this.y);
-            const wavelength = 20; // Adjust wavelength for visualization
-            const phaseDifference = (2 * Math.PI * pathDifference) / wavelength;
-            const intensity = this.amplitude * Math.cos(this.phase - phaseDifference);
-
-            if (!impactCounts[i]) {
-              impactCounts[i] = 0;
-            }
-            impactCounts[i] += intensity;
-          }
-          // Remove wavefront after reaching the screen
-          const index = wavefronts.indexOf(this);
-          if (index > -1) {
-            wavefronts.splice(index, 1);
-          }
+          interferencePatternActive = true;
+          // Optionally, you can stop the wavefront at the screen
+          this.x = screenPosition;
+          return false; // Do not remove the wavefront yet
         }
+        return false;
       }
 
-      draw() {
-        // Visualize the wavefront as a moving sinusoidal wave
+      draw(ctx, time) {
+        if (!ctx) return; // Guard clause to prevent errors if ctx is undefined
+
         ctx.beginPath();
         ctx.strokeStyle = "rgba(0, 0, 255, 0.2)";
         ctx.lineWidth = 1;
         for (let x = this.x; x < this.x + 50; x += 1) {
-          const y =
-            this.y +
-            20 * Math.sin((2 * Math.PI * (x - this.x)) / 40 - this.phase);
+          const distance = x - this.x;
+          const y = this.y + 20 * Math.sin(this.angularFrequency * (time - distance / this.vx) + this.initialPhase);
           if (x === this.x) {
             ctx.moveTo(x, y);
           } else {
@@ -277,6 +268,30 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
       }
     };
 
+    const calculateInterference = (y, time) => {
+      const wavelength = 50;
+      const k = (2 * Math.PI) / wavelength;
+      const slitSeparation = slitY2 + slitHeight / 2 - (slitY1 + slitHeight / 2);
+      const screenDistance = screenPosition - barrierPosition;
+
+      const yPosition = y + 0.5;
+      const deltaY1 = yPosition - (slitY1 + slitHeight / 2);
+      const deltaY2 = yPosition - (slitY2 + slitHeight / 2);
+
+      const r1 = Math.sqrt(screenDistance ** 2 + deltaY1 ** 2);
+      const r2 = Math.sqrt(screenDistance ** 2 + deltaY2 ** 2);
+
+      const pathDifference = r2 - r1;
+      const phaseDifference = k * pathDifference;
+
+      const amplitude1 = Math.cos(k * r1 - 2 * Math.PI * time / 100);
+      const amplitude2 = Math.cos(k * r2 - 2 * Math.PI * time / 100);
+
+      const intensity = (amplitude1 + amplitude2) ** 2;
+
+      return intensity / 4; // Normalize to [0, 1]
+    };
+
     const drawInterferencePattern = () => {
       ctx.fillStyle = "#CFD8DC";
       ctx.fillRect(screenPosition + 2, 0, 48, canvas.height);
@@ -292,18 +307,23 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
           ctx.fillStyle = bottomSlitColor;
           ctx.fillRect(screenPosition + 2, topHeight, 48, bottomHeight);
         }
-      } else {
-        const maxCount = Math.max(
-          ...impactCounts.map((count) => Math.abs(count))
-        );
+      } else if (interferencePatternActive) {
+        const imageData = ctx.createImageData(48, canvas.height);
 
         for (let y = 0; y < canvas.height; y++) {
-          const intensity = impactCounts[y] ? impactCounts[y] / maxCount : 0;
-          const brightness = Math.pow(intensity, 2); // Square of amplitude gives intensity
-          const color = `rgba(100, 181, 246, ${Math.abs(brightness)})`;
-          ctx.fillStyle = color;
-          ctx.fillRect(screenPosition + 2, y, 48, 1);
+          const intensity = calculateInterference(y, frameCount);
+          const color = Math.floor(intensity * 255);
+
+          const index = y * 48 * 4;
+          for (let x = 0; x < 48; x++) {
+            imageData.data[index + x * 4] = 100;     // R
+            imageData.data[index + x * 4 + 1] = 181; // G
+            imageData.data[index + x * 4 + 2] = 246; // B
+            imageData.data[index + x * 4 + 3] = color; // A
+          }
         }
+
+        ctx.putImageData(imageData, screenPosition + 2, 0);
       }
     };
 
@@ -347,7 +367,7 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
         particles.push(new Particle());
       }
 
-      particles.forEach((particle) => {
+      particles.forEach((particle, index) => {
         particle.move();
         particle.draw();
 
@@ -357,7 +377,6 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
             channel: particle.channel,
             intensity: 1,
           });
-          const index = particles.indexOf(particle);
           particles.splice(index, 1);
           if (isDetectorOn) {
             updateInterferencePattern();
@@ -367,12 +386,10 @@ const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
 
       wavefronts.forEach((wavefront) => {
         wavefront.propagate();
-        wavefront.draw();
+        wavefront.draw(ctx, frameCount);
       });
 
-      if (impacts.length > 0 || wavefronts.length > 0) {
-        drawInterferencePattern();
-      }
+      drawInterferencePattern();
 
       // Draw superposition explanation
       if (particles.length > 0 && particles[0].inSuperposition) {
