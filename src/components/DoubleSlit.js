@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from "react";
 
-const DoubleSlit = ({ isEmitting, isDetectorOn }) => {
+const DoubleSlit = ({ isEmitting, isDetectorOn, setTooltipContent }) => {
   const canvasRef = useRef(null);
   const animationRef = useRef();
 
@@ -213,10 +213,39 @@ const DoubleSlit = ({ isEmitting, isDetectorOn }) => {
       }
     };
 
+    const drawDetector = () => {
+      if (isDetectorOn) {
+        ctx.fillStyle = "#FF4081";
+        ctx.fillRect(barrierPosition - 20, 0, 10, canvas.height);
+
+        // Draw "sensors" near slits
+        ctx.fillRect(barrierPosition - 15, slitY1, 20, slitHeight);
+        ctx.fillRect(barrierPosition - 15, slitY2, 20, slitHeight);
+
+        setTooltipContent("Detector Active: Observing particle paths through slits");
+      } else {
+        setTooltipContent("");
+      }
+    };
+
+    const highlightSlits = () => {
+      if (isDetectorOn) {
+        ctx.shadowColor = "#FF4081";
+        ctx.shadowBlur = 10;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#FF4081";
+        ctx.strokeRect(barrierPosition, slitY1, slitWidth, slitHeight);
+        ctx.strokeRect(barrierPosition, slitY2, slitWidth, slitHeight);
+        ctx.shadowBlur = 0;
+      }
+    };
+
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawBarrier();
       drawScreen();
+      drawDetector();
+      highlightSlits();
 
       frameCount++;
 

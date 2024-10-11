@@ -12,11 +12,13 @@ import {
 } from "@mui/material";
 import DoubleSlit from "./components/DoubleSlit";
 import "./App.css";
+import { Visibility } from "@mui/icons-material";
 
 function App() {
   const [activeStep, setActiveStep] = useState(0);
   const [isEmitting, setIsEmitting] = useState(false);
   const [isDetectorOn, setIsDetectorOn] = useState(false);
+  const [tooltipContent, setTooltipContent] = useState("");
 
   const steps = [
     {
@@ -102,7 +104,7 @@ function App() {
         </Grid>
         {/* Animation and Controls */}
         <Grid item xs={12} md={8} style={{ textAlign: "center" }}>
-          <DoubleSlit isEmitting={isEmitting} isDetectorOn={isDetectorOn} />
+          <DoubleSlit isEmitting={isEmitting} isDetectorOn={isDetectorOn} setTooltipContent={setTooltipContent} />
           <div
             className="controls"
             style={{
@@ -168,6 +170,34 @@ function App() {
           </Paper>
         </Grid>
       </Grid>
+      <Typography variant="body2" style={{ marginTop: "10px", minHeight: "20px" }}>
+        <Paper
+          elevation={3}
+          style={{
+            marginTop: "20px",
+            padding: "10px",
+            backgroundColor: isDetectorOn ? "#E3F2FD" : "transparent",
+            transition: "background-color 0.3s ease",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Typography
+            variant="body1"
+            style={{
+              fontWeight: "500",
+              color: isDetectorOn ? "#1565C0" : "transparent",
+              transition: "color 0.3s ease",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            {isDetectorOn && <Visibility style={{ marginRight: "8px" }} />}
+            {tooltipContent}
+          </Typography>
+        </Paper>
+      </Typography>
     </div>
   );
 }
